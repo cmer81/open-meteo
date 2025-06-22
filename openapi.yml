@@ -5,7 +5,7 @@ info:
   version: '1.0'
   contact:
     name: Open-Meteo
-    url: https://open-meteo.com
+    url: https://meteo-api.cloud.cmer.fr
     email: info@open-meteo.com
   license:
     name: Attribution 4.0 International (CC BY 4.0)
@@ -14,7 +14,7 @@ info:
 paths:
   /v1/forecast:
     servers:
-      - url: https://api.open-meteo.com
+      - url: https://meteo-api.cloud.cmer.fr
     get:
       tags:
       - Weather Forecast APIs
