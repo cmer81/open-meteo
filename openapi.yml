@@ -125,6 +125,15 @@ paths:
           - ms
           - mph
           - kn
+      - name: precipitation_unit
+        in: query
+        description: "Other precipitation amount units"
+        schema:
+          type: string
+          default: mm
+          enum:
+          - mm
+          - inch
       - name: timeformat
         in: query
         description: If format `unixtime` is selected, all time values are returned in UNIX epoch time in seconds. Please not that all time is then in GMT+0! For daily values with unix timestamp, please apply `utc_offset_seconds` again to get the correct date.
@@ -147,6 +156,65 @@ paths:
           enum:
           - 1
           - 2
+      - name: start_date
+        in: query
+        description: "The time interval to get weather data. A day must be specified as an ISO8601 date (e.g. 2022-06-30)."
+        schema:
+          type: string
+          format: date
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+      - name: end_date
+        in: query
+        description: "The time interval to get weather data. A day must be specified as an ISO8601 date (e.g. 2022-06-30)."
+        schema:
+          type: string
+          format: date
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+      - name: start_hour
+        in: query
+        description: "The time interval to get weather data for hourly or 15 minutely data. Time must be specified as an ISO8601 date (e.g. 2022-06-30T12:00)."
+        schema:
+          type: string
+          format: date-time
+          pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$'
+      - name: end_hour
+        in: query
+        description: "The time interval to get weather data for hourly or 15 minutely data. Time must be specified as an ISO8601 date (e.g. 2022-06-30T12:00)."
+        schema:
+          type: string
+          format: date-time
+          pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$'
+      - name: start_minutely_15
+        in: query
+        description: "The time interval to get weather data for hourly or 15 minutely data. Time must be specified as an ISO8601 date (e.g. 2022-06-30T12:00)."
+        schema:
+          type: string
+          format: date-time
+          pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$'
+      - name: end_minutely_15
+        in: query
+        description: "The time interval to get weather data for hourly or 15 minutely data. Time must be specified as an ISO8601 date (e.g. 2022-06-30T12:00)."
+        schema:
+          type: string
+          format: date-time
+          pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$'
+      - name: models
+        in: query
+        description: "Manually select one or more weather models. Per default, the best suitable weather models will be combined."
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - auto
+            - meteofrance_arome_france_hd
+            - meteofrance_arome_france0025
+            - meteofrance_arpege_europe
+            - dwd_icon_eu
+            - dwd_icon
+            - ecmwf_ifs025
+            - ncep_gfs013
+          default: ["auto"]
       responses:
         "200":
           description: OK
