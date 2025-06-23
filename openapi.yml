@@ -200,7 +200,7 @@ paths:
           pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$'
       - name: models
         in: query
-        description: "Manually select one or more weather models. If not specified, the server will use its default selection algorithm."
+        description: "Manually select one or more weather models. Available models: meteofrance_arome_france_hd (Météo-France HD France), meteofrance_arome_france0025 (Météo-France AROME 0.025°), meteofrance_arpege_europe (Météo-France ARPÈGE Europe), dwd_icon_eu (DWD ICON Europe), dwd_icon (DWD ICON Global), ecmwf_ifs025 (ECMWF IFS 0.25°), ncep_gfs013 (NCEP GFS 0.13°). If not specified, the server will use its default selection algorithm."
         schema:
           type: array
           items:
