@@ -1,36 +1,33 @@
-# Docker Compose file for running the Open-Meteo API on Docker
-# Start with: docker compose up
+# Infoclimat pipeline — Phase 1 smoke test
+# Runs the Open-Meteo download/convert pipeline locally for AROME France HD.
 #
-# http://0.0.0.0:8080/v1/forecast?latitude=47.1&longitude=8.6&hourly=temperature_2m&models=icon_global
+# Usage:
+#   cp .env.example .env   # then edit METEOFRANCE_API_KEY
+#   docker compose up      # one-shot download of latest run, then exits
 #
-
-volumes:
-  open_meteo_database:
-
-x-shared_environment: &shared_environment
-  LOG_LEVEL: info
+# Output appears in ./data/data_spatial/meteofrance_arome_france_hd/<run>/*.om
 
 services:
-  open-meteo-sync:
-      image: ghcr.io/open-meteo/open-meteo
-      container_name: open-meteo-sync
-      environment:
-        <<: *shared_environment
-      command: sync dwd_icon temperature_2m --past-days 2 --repeat-interval 1 --concurrent 1
-      volumes:
-       - open_meteo_database:/app/data
-      restart: always
-
-  open-meteo:
-    image: ghcr.io/open-meteo/open-meteo
-    container_name: open-meteo-api
-    volumes:
-      - open_meteo_database:/app/data
-    build:
-      context: .
+  arome-france-hd:
+    image: ghcr.io/open-meteo/open-meteo:latest
+    container_name: ic-arome-france-hd
+    env_file: .env
     environment:
-      <<: *shared_environment
-    ports:
-      - '8080:8080'
-    user: '0'
-    command: ["serve", "--env", "production", "--hostname", "0.0.0.0", "--port", "8080"]
+      LOG_LEVEL: info
+      DATA_DIRECTORY: /app/data/
+      DATA_SPATIAL_DIRECTORY: /app/data/data_spatial/
+    volumes:
+      - ./data:/app/data
+    # Smoke test: 2 variables, 6-hour forecast horizon, 2 concurrent downloads.
+    # Drop --only-variables and --max-forecast-hour for full production sync.
+    command:
+      - download-meteofrance
+      - arome_france_hd
+      - --run
+      - "2026051615"
+      - --only-variables
+      - precipitation,temperature_2m
+      - --max-forecast-hour
+      - "6"
+      - --concurrent
+      - "2"
