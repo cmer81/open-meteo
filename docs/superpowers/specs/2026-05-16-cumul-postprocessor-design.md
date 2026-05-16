@@ -37,6 +37,55 @@ NaN is the chosen behaviour for early timesteps. The front already renders missi
 - **No model-specific logic**: same algorithm for every domain.
 - **No reverse migration** of already-produced runs. Cumuls are computed only for new runs as they arrive.
 
+## File format (confirmed)
+
+**Investigation date**: 2026-05-16 — Task 0 spike, Phase-1 run `2026051615` AROME France HD.
+
+### Layout: one `.om` per **timestep**, MULTI-VARIABLE
+
+Each file (`2026-05-16T1600.om`, etc.) is an OmFileFormat v3 file whose root node is a **GROUP** (not an array). Confirmed via Python `omfiles` library (`OmFileReader.is_group == True`, `OmFileReader.is_array == False`). The Group tree for a typical timestep (t > 0) contains:
+
+| Node name | Type | Shape / value |
+|-----------|------|---------------|
+| `precipitation` | array (float32) | (1791, 2801), chunks (32, 32) |
+| `temperature_2m` | array (float32) | (1791, 2801), chunks (32, 32) |
+| `crs_wkt` | scalar string | GEOGCRS WKT for WGS 84, bbox 37.5/−12/55.4/16 |
+| `forecast_reference_time` | scalar int64 | Unix timestamp of run start |
+| `valid_time` | scalar int64 | Unix timestamp of this timestep |
+| `coordinates` | scalar string | `"lat lon"` |
+| `created_at` | scalar int64 | Unix timestamp of file creation |
+
+The first timestep (`T+0`, i.e. `2026-05-16T1500.om`) only contains `temperature_2m` because `MeteoFranceVariableDownloadable.skipHour0 == true` for precipitation — that is not a format anomaly, it is by design.
+
+### OmFileReader Swift API to enumerate variables
+
+Inside the OmFileFormat Swift package, the `OmFileReader` (v3) exposes a **tree of nodes**. To enumerate named variable children of a group:
+
+```swift
+let reader = try await OmFileReader(fn: try MmapFile(fn: FileHandle.openFileReading(file: path)))
+// reader.isGroup == true for these spatial files
+// reader.children → [OmFileReader]  (one per named node)
+// Each child: child.name, child.isArray, child.asArray(of: Float.self) -> OmFileReaderArray
+```
+
+The equivalent Python API confirmed by inspection:
+`reader.get_child_by_name("precipitation")` — returns the array node.
+`reader.get_child_by_index(i)` — returns child by position.
+
+The `asArray(of: Float.self)` on the root fails with `invalidDataType` for group-root files — this is expected. You must descend into the named child first.
+
+### Impact on Task 3 (CumulOmRewriter)
+
+The rewriter **cannot append in-place**. The `OmFileWriter` API only creates fresh files. The correct pattern:
+
+1. Open existing `T.om` for read.
+2. Create `T.om~` for write.
+3. Copy all existing children (precipitation, temperature_2m, metadata scalars) verbatim.
+4. Compute and append derived variables (`precipitation_run_total`, `precipitation_6h_sum`, `precipitation_24h_sum`, …) as new array children.
+5. Atomic rename `T.om~ → T.om`.
+
+No design change needed for Tasks 1–2 or 4–7. The "in-place modification" phrasing in the spec above should be understood as "read-then-rewrite-atomically", not an in-place byte-patch.
+
 ## Architecture
 
 ### New Swift command
