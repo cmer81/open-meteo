@@ -1,6 +1,12 @@
 # modeles-infoclimat-pipeline
 
-> **Statut au 2026-05-16** : répertoire **vide**, rien n'a encore été cloné ni codé. Ce fichier est le brief de contexte pour démarrer.
+> **Statut au 2026-05-17** :
+> - ✅ Phase 0 (fork + clone) — done
+> - ✅ Phase 1 (Docker pipeline local AROME France HD) — done, produit des `.om` valides
+> - ⚙️ Phase 2 (cumuls custom) — spec + plan écrits ([specs/](docs/superpowers/specs/2026-05-16-cumul-postprocessor-design.md), [plans/](docs/superpowers/plans/2026-05-16-cumul-postprocessor.md)) ; Task 0 (spike `.om` format) done, Tasks 1–7 à faire.
+> - ⏳ Phases 3–5 — pas commencées.
+>
+> **Reprendre sur une nouvelle machine** : voir la section "Reprise" en bas de ce fichier.
 
 ## But du projet
 
@@ -54,12 +60,11 @@ Les fichiers produits sont consommés par le sister-project [`../modeles-infocli
 - **Stratégie git pour les patches** : branche `infoclimat/main` posée sur `upstream/main`, rebase à chaque pull. Pas de dossier `patches/` séparé.
 - **Storage** : Cloudflare R2. Egress gratuit = killer feature vs S3. Estimation ~10 $/mois.
 - **Nom domaine** : `data.infoclimat.fr` (à valider avec l'asso quand on en sera là)
-- **Compatibilité front** : on respecte STRICTEMENT le layout d'URLs Open-Meteo pour qu'un simple changement de `getBaseUri()` côté front suffise :
+- **Compatibilité front** : on respecte STRICTEMENT le layout d'URLs Open-Meteo pour qu'un simple changement de `getBaseUri()` côté front suffise. Layout réel **confirmé en Phase 1** (les `<run>` sont exprimés comme `YYYY/MM/DD/HHMMZ`, pas en un seul segment) :
   ```
   data_spatial/<domain>/latest.json
   data_spatial/<domain>/in-progress.json
-  data_spatial/<domain>/<run>/meta.json
-  data_spatial/<domain>/<run>/<timestamp>.om
+  data_spatial/<domain>/YYYY/MM/DD/HHMMZ/<timestamp>.om
   ```
 - **Licence** : AGPL-3.0 (héritée upstream). Notre fork doit être public. Pas un blocker — Infoclimat fait déjà de l'open-source.
 
@@ -68,13 +73,11 @@ Les fichiers produits sont consommés par le sister-project [`../modeles-infocli
 ### Phase 0 — Setup repo (~30 min)
 
 1. **Fork sur GitHub** : `github.com/open-meteo/open-meteo` → `cmer81/open-meteo` (ou `infoclimat-org/open-meteo` si l'asso a un GitHub org)
-2. **Cloner ICI** (le dossier courant est vide, prêt) :
+2. **Cloner** (cf. section "Reprise" en bas pour la commande à jour) :
    ```bash
-   cd /Users/cedric/Documents/infoclimat/modeles-infoclimat-pipeline/
-   # CAREFUL: le dossier doit être vide. Cloner DANS lui :
-   git clone git@github.com:cmer81/open-meteo.git .
+   git clone -b infoclimat/main git@github.com:cmer81/open-meteo.git
+   cd open-meteo
    git remote add upstream git@github.com:open-meteo/open-meteo.git
-   git checkout -b infoclimat/main
    ```
 3. Vérifier qu'on est sur Swift toolchain compatible (cf. `Package.swift` upstream).
 
@@ -164,7 +167,38 @@ La feature **cumuls pluvio** ne pouvait pas être résolue côté front (Open-Me
 
 ## TODO immédiat (avant tout dev)
 
-- [ ] Vérifier sur GitHub que l'issue [open-meteo/open-meteo#1580](https://github.com/open-meteo/open-meteo/issues/1580) (ou recherche `precipitation accumulation`) n'a pas une réponse favorable d'Open-Meteo entre-temps
-- [ ] Si non, ouvrir une issue chez eux pour demander `precipitation_24h_sum` dans le catalogue `data_spatial` — gratuit, 5 min, peut tuer ce projet entier dans l'œuf 🎉
-- [ ] Si toujours non, ou si on veut de toute façon notre indépendance : forker `open-meteo/open-meteo` et démarrer Phase 0
-- [ ] Décider qui héberge à terme : serveur perso cedric vs infra Infoclimat (à discuter avec l'asso)
+- [x] ~~Vérifier sur GitHub que l'issue [open-meteo/open-meteo#1580]~~ — vérifié 2026-05-16, c'est sur le *taux instantané* pas les cumuls, pas la même demande.
+- [ ] Ouvrir éventuellement une issue chez Open-Meteo pour `precipitation_24h_sum` (skip pour l'instant, on intègre le calcul nous-mêmes).
+- [x] ~~Forker et démarrer Phase 0~~ — done 2026-05-16, fork à `cmer81/open-meteo`, branche `infoclimat/main`.
+- [ ] Décider qui héberge à terme : serveur perso cedric vs infra Infoclimat (à discuter avec l'asso, pas encore).
+
+## Reprise (nouvelle machine)
+
+Pour reprendre le projet sur une autre machine (e.g. Ubuntu x64) :
+
+```bash
+# 1. Cloner le fork sur la branche de travail
+git clone -b infoclimat/main git@github.com:cmer81/open-meteo.git
+cd open-meteo
+git remote add upstream git@github.com:open-meteo/open-meteo.git
+
+# 2. Pré-requis système
+#    - Docker Engine + Compose v2 (apt install docker.io docker-compose-plugin)
+#    - netcdf-bin (pour `ncdump` lors de la vérif Task 0/6 du plan : apt install netcdf-bin)
+#    - (optionnel) Swift toolchain si tu veux `swift test` en local sans Docker.
+#      Sinon, Tasks 1-7 peuvent toutes tourner dans Dockerfile.development.
+
+# 3. Configurer la clé Météo-France (gitignored, à recréer)
+cp .env.example .env
+# puis éditer .env, mettre METEOFRANCE_API_KEY=<ta clé eyJ4NXQi...>
+
+# 4. Sanity check Phase 1 (re-télécharge un run AROME France HD)
+docker compose up    # ~4 min, produit data/data_spatial/...
+
+# 5. Continuer Phase 2 : suivre `docs/superpowers/plans/2026-05-16-cumul-postprocessor.md`
+#    Prochaine task = Task 1 (CumulMath.swift + tests TDD).
+```
+
+État git au 2026-05-17 (push fait sur `cmer81/open-meteo`) :
+- `ca782e4e` — baseline Phase 1 pipeline + Phase 2 design
+- `4c6ffad8` — docs(cumul): record confirmed .om spatial file structure (Task 0 spike)

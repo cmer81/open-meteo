@@ -45,7 +45,7 @@ docker compose run --rm arome-france-hd \
   --format netcdf -o /app/data/inspect.nc --domain meteofrance_arome_france_hd
 ```
 
-Then `ncdump -h /Users/cedric/Documents/infoclimat/modeles-infoclimat-pipeline/data/inspect.nc` to see variable names and dimensions.
+Then `ncdump -h $REPO_ROOT/data/inspect.nc` to see variable names and dimensions.
 
 Expected: one or several variables, each shape `(LAT, LON)` or `(LAT, LON, time)`.
 
@@ -683,7 +683,7 @@ Plus change the `image:` line to `build: .` so it uses our patched code:
 - [ ] **Step 2: Build and run end-to-end**
 
 ```bash
-cd /Users/cedric/Documents/infoclimat/modeles-infoclimat-pipeline
+cd $REPO_ROOT
 docker compose build  # first build is slow (~10-30 min)
 docker compose up
 ```
@@ -698,7 +698,7 @@ docker compose run --rm arome-france-hd \
   /app/data/data_spatial/meteofrance_arome_france_hd/2026/05/16/1500Z/2026-05-16T1500.om \
   --format netcdf -o /app/data/check.nc --domain meteofrance_arome_france_hd
 
-ncdump -h /Users/cedric/Documents/infoclimat/modeles-infoclimat-pipeline/data/check.nc | grep -E "precipitation"
+ncdump -h $REPO_ROOT/data/check.nc | grep -E "precipitation"
 ```
 
 Expected output: lines containing `precipitation`, `precipitation_run_total`, `precipitation_6h_sum`, `precipitation_24h_sum`.
